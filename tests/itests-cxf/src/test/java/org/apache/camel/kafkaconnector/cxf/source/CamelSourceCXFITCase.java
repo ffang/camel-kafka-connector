@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.camel.kafkaconnector.common.AbstractKafkaTest;
 import org.apache.camel.kafkaconnector.common.ConnectorPropertyFactory;
 import org.apache.camel.kafkaconnector.common.clients.kafka.KafkaClient;
+import org.apache.camel.kafkaconnector.common.utils.NetworkUtils;
 import org.apache.camel.kafkaconnector.common.utils.TestUtils;
 import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
@@ -48,7 +49,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Testcontainers
 public class CamelSourceCXFITCase extends AbstractKafkaTest {
     
-    protected static final String SIMPLE_ENDPOINT_ADDRESS = "http://localhost:12345"
+    protected static final int PORT = NetworkUtils.getFreePort("localhost");
+    protected static final String SIMPLE_ENDPOINT_ADDRESS = "http://localhost:" + PORT
         + "/CxfConsumerTest/test";
     protected static final String SIMPLE_ENDPOINT_URI =  SIMPLE_ENDPOINT_ADDRESS
         + "?serviceClass=org.apache.camel.kafkaconnector.cxf.source.HelloService"
@@ -56,6 +58,7 @@ public class CamelSourceCXFITCase extends AbstractKafkaTest {
 
     
     private static final String TEST_MESSAGE = "Hello World!";
+    
 
     
     private static final Logger LOG = LoggerFactory.getLogger(CamelSourceCXFITCase.class);
