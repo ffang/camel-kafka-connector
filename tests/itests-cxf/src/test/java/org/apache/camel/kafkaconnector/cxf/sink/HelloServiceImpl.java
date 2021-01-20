@@ -57,11 +57,15 @@ public class HelloServiceImpl implements HelloService {
 
     @Override
     public String sayHello() {
+        
         return "hello" + name;
     }
 
     @Override
     public Boolean echoBoolean(Boolean bool) {
+        LOG.info("call for echoBoolean with " + bool);
+        invocationCount++;
+        LOG.info("invocationCount is " + invocationCount);
         return bool;
     }
 

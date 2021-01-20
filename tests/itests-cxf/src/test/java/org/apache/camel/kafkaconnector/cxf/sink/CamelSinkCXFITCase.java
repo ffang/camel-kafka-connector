@@ -111,7 +111,10 @@ public class CamelSinkCXFITCase extends AbstractKafkaTest {
             } catch (ExecutionException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
+                e.printStackTrace();
                 break;
+            } catch (Throwable  e) {
+                e.printStackTrace();
             }
         }
     }
@@ -119,10 +122,10 @@ public class CamelSinkCXFITCase extends AbstractKafkaTest {
     public void runTest(ConnectorPropertyFactory connectorPropertyFactory) throws ExecutionException, InterruptedException, TimeoutException {
         connectorPropertyFactory.log();
         getKafkaConnectService().initializeConnector(connectorPropertyFactory);
-
+        Thread.sleep(5000);
         ExecutorService service = Executors.newCachedThreadPool();
         service.submit(this::putRecords);
-
+        Thread.sleep(5000);
         LOG.debug("Created the consumer ... About to receive messages");
                 
     }
