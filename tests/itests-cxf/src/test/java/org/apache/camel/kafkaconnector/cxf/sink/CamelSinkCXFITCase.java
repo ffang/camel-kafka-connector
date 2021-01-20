@@ -33,6 +33,8 @@ import org.apache.camel.kafkaconnector.common.utils.TestUtils;
 import org.apache.camel.kafkaconnector.cxf.source.HelloService;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.endpoint.Server;
+import org.apache.cxf.ext.logging.LoggingInInterceptor;
+import org.apache.cxf.ext.logging.LoggingOutInterceptor;
 import org.apache.cxf.frontend.ServerFactoryBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +58,7 @@ public class CamelSinkCXFITCase extends AbstractKafkaTest {
     protected static final String ECHO_OPERATION = "echo";
     protected static final String GREET_ME_OPERATION = "greetMe";
     protected static final String TEST_MESSAGE = "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-        + "<soap:Body><ns1:echo xmlns:ns1=\"http://cxf.component.camel.apache.org/\">"
+        + "<soap:Body><ns1:echo xmlns:ns1=\"http://source.cxf.kafkaconnector.camel.apache.org/\">"
         + "<arg0 xmlns=\"http://cxf.component.camel.apache.org/\">hello world</arg0>"
         + "</ns1:echo></soap:Body></soap:Envelope>";
 
@@ -89,7 +91,8 @@ public class CamelSinkCXFITCase extends AbstractKafkaTest {
         svrBean.setServiceBean(new HelloServiceImpl());
         svrBean.setBus(BusFactory.getDefaultBus());
         server = svrBean.create();
-
+        server.getEndpoint().getInInterceptors().add(new LoggingInInterceptor());
+        server.getEndpoint().getOutInterceptors().add(new LoggingOutInterceptor());
         //GreeterImpl greeterImpl = new GreeterImpl();
         //endpoint = Endpoint.publish(getJaxWsServerAddress(), greeterImpl);
     }
