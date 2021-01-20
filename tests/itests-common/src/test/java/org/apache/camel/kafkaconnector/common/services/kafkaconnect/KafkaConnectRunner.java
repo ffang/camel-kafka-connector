@@ -39,6 +39,7 @@ import org.apache.kafka.connect.runtime.WorkerInfo;
 import org.apache.kafka.connect.runtime.isolation.Plugins;
 import org.apache.kafka.connect.runtime.rest.RestServer;
 import org.apache.kafka.connect.runtime.rest.entities.ConnectorInfo;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
 import org.apache.kafka.connect.runtime.standalone.StandaloneConfig;
 import org.apache.kafka.connect.runtime.standalone.StandaloneHerder;
 import org.apache.kafka.connect.storage.FileOffsetBackingStore;
@@ -110,7 +111,7 @@ class KafkaConnectRunner {
      *
      */
     private void init() {
-        LOG.info("Started worked initialization");
+        LOG.info("Started worker initialization");
 
         Time time = Time.SYSTEM;
 
@@ -216,7 +217,7 @@ class KafkaConnectRunner {
     public void stop() {
         if (connect != null) {
             LOG.info("Removing topics used during the test");
-            KafkaClient kafkaClient = new KafkaClient(bootstrapServer);
+            KafkaClient<?, ?> kafkaClient = new KafkaClient<>(bootstrapServer);
 
             for (String connector : herder.connectors()) {
                 herder.connectorActiveTopics(connector).topics().forEach(t -> kafkaClient.deleteTopic(t));
@@ -226,5 +227,13 @@ class KafkaConnectRunner {
         } else {
             LOG.warn("Trying to stop an uninitialized Kafka Connect Runner");
         }
+    }
+
+    private ConnectorStateInfo getConnectorStatus(String connectorName) {
+        return herder.connectorStatus(connectorName);
+    }
+
+    public void connectorStateCheck(Consumer<ConnectorStateInfo> taskStateConsumer) {
+        herder.connectors().forEach(c -> taskStateConsumer.accept(getConnectorStatus(c)));
     }
 }

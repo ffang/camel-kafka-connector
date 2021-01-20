@@ -23,12 +23,15 @@ import java.util.Map;
 import org.apache.camel.kafkaconnector.transforms.SlackMessage.Attachment;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.json.JsonConverterConfig;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class SinkPojoToSchemaAndStructTransformTest {
+public class SchemaAndStructToJsonTransformTest {
 
     @Test
     public void testRecordValueConversion() {
@@ -59,22 +62,20 @@ public class SinkPojoToSchemaAndStructTransformTest {
                 Schema.STRING_SCHEMA, "testKeyValue",
                 Schema.BYTES_SCHEMA, sm));
 
-        SinkPojoToSchemaAndStructTransform sinkPojoToSchemaAndStructTransform = new SinkPojoToSchemaAndStructTransform();
-        sinkPojoToSchemaAndStructTransform.configure(Collections.singletonMap(SinkPojoToSchemaAndStructTransform.CAMEL_TRANSFORMER_SINK_POJO_CLASS_PROPERTY, SlackMessage.class.getName()));
+        SchemaAndStructToJsonTransform schemaAndStructToJsonTransform = new SchemaAndStructToJsonTransform();
+        schemaAndStructToJsonTransform.configure(Collections.emptyMap());
 
-        ConnectRecord transformedCr = sinkPojoToSchemaAndStructTransform.apply(cr);
+        ConnectRecord transformedCr = schemaAndStructToJsonTransform.apply(cr);
 
         assertEquals("testTopic", transformedCr.topic());
         assertEquals(Schema.STRING_SCHEMA, transformedCr.keySchema());
         assertEquals("testKeyValue", transformedCr.key());
-        assertEquals(SlackMessage.class.getName(), transformedCr.value().getClass().getName());
-        SlackMessage transformedSM = (SlackMessage)transformedCr.value();
-        assertEquals(sm.getText(), transformedSM.getText());
-        assertEquals(sm.getAttachments().size(), transformedSM.getAttachments().size());
+        assertEquals(byte[].class.getName(), transformedCr.value().getClass().getName());
+        assertTrue(new String((byte[])transformedCr.value()).contains("schema"));
     }
 
     @Test
-    public void testMapValueConversion() {
+    public void testMapValueConversionSchemaDisabled() {
         SourcePojoToSchemaAndStructTransform sourcePojoToSchemaAndStructTransform = new SourcePojoToSchemaAndStructTransform();
         sourcePojoToSchemaAndStructTransform.configure(Collections.emptyMap());
 
@@ -85,25 +86,22 @@ public class SinkPojoToSchemaAndStructTransformTest {
                 Schema.STRING_SCHEMA, "testKeyValue",
                 Schema.BYTES_SCHEMA, pwm));
 
-        SinkPojoToSchemaAndStructTransform sinkPojoToSchemaAndStructTransform = new SinkPojoToSchemaAndStructTransform();
-        sinkPojoToSchemaAndStructTransform.configure(Collections.singletonMap(SinkPojoToSchemaAndStructTransform.CAMEL_TRANSFORMER_SINK_POJO_CLASS_PROPERTY, PojoWithMap.class.getName()));
+        SchemaAndStructToJsonTransform schemaAndStructToJsonTransform = new SchemaAndStructToJsonTransform();
+        schemaAndStructToJsonTransform.configure(Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, false));
 
-        ConnectRecord transformedCr = sinkPojoToSchemaAndStructTransform.apply(cr);
+        ConnectRecord transformedCr = schemaAndStructToJsonTransform.apply(cr);
 
         assertEquals("testTopic", transformedCr.topic());
         assertEquals(Schema.STRING_SCHEMA, transformedCr.keySchema());
         assertEquals("testKeyValue", transformedCr.key());
-
-        assertEquals(PojoWithMap.class.getName(), transformedCr.value().getClass().getName());
-        PojoWithMap transformedPWM = (PojoWithMap)transformedCr.value();
-        assertEquals(pwm.getMap().size(), transformedPWM.getMap().size());
-        assertEquals(pwm.getMap().keySet(), transformedPWM.getMap().keySet());
+        assertEquals(byte[].class.getName(), transformedCr.value().getClass().getName());
+        assertFalse(new String((byte[])transformedCr.value()).contains("schema"));
     }
 
     @Test()
     public void testNotStructSchemaConversion() {
-        SinkPojoToSchemaAndStructTransform sinkPojoToSchemaAndStructTransform = new SinkPojoToSchemaAndStructTransform();
-        sinkPojoToSchemaAndStructTransform.configure(Collections.singletonMap(SinkPojoToSchemaAndStructTransform.CAMEL_TRANSFORMER_SINK_POJO_CLASS_PROPERTY, PojoWithMap.class.getName()));
+        SchemaAndStructToJsonTransform schemaAndStructToJsonTransform = new SchemaAndStructToJsonTransform();
+        schemaAndStructToJsonTransform.configure(Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, true));
 
         Map map = Collections.singletonMap("ciao", 9);
 
@@ -111,20 +109,20 @@ public class SinkPojoToSchemaAndStructTransformTest {
                 Schema.STRING_SCHEMA, "testKeyValue",
                 null, map);
 
-        ConnectRecord transformedCr = sinkPojoToSchemaAndStructTransform.apply(cr);
+        ConnectRecord transformedCr = schemaAndStructToJsonTransform.apply(cr);
         assertEquals(cr, transformedCr);
     }
 
     @Test()
     public void testNullValueConversion() {
-        SinkPojoToSchemaAndStructTransform sinkPojoToSchemaAndStructTransform = new SinkPojoToSchemaAndStructTransform();
-        sinkPojoToSchemaAndStructTransform.configure(Collections.singletonMap(SinkPojoToSchemaAndStructTransform.CAMEL_TRANSFORMER_SINK_POJO_CLASS_PROPERTY, PojoWithMap.class.getName()));
+        SchemaAndStructToJsonTransform schemaAndStructToJsonTransform = new SchemaAndStructToJsonTransform();
+        schemaAndStructToJsonTransform.configure(Collections.singletonMap(JsonConverterConfig.SCHEMAS_ENABLE_CONFIG, true));
 
         ConnectRecord cr = new SourceRecord(null, null, "testTopic",
                 Schema.STRING_SCHEMA, "testKeyValue",
                 Schema.BYTES_SCHEMA, null);
 
-        ConnectRecord transformedCr = sinkPojoToSchemaAndStructTransform.apply(cr);
+        ConnectRecord transformedCr = schemaAndStructToJsonTransform.apply(cr);
         assertEquals(cr, transformedCr);
     }
 }

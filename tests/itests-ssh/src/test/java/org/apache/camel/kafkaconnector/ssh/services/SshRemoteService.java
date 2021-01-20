@@ -17,13 +17,20 @@
 
 package org.apache.camel.kafkaconnector.ssh.services;
 
+import org.apache.camel.kafkaconnector.ssh.common.SshProperties;
+
 public class SshRemoteService implements SshService {
 
     private static final int DEFAULT_SSH_PORT = 22;
 
     @Override
-    public void initialize() {
+    public void registerProperties() {
+        // NO-OP
+    }
 
+    @Override
+    public void initialize() {
+        registerProperties();
     }
 
     @Override
@@ -33,7 +40,7 @@ public class SshRemoteService implements SshService {
 
     @Override
     public int getSshPort() {
-        String strPort = System.getProperty("ssh.port");
+        String strPort = System.getProperty(SshProperties.SSH_PORT);
 
         if (strPort != null) {
             return Integer.parseInt(strPort);
@@ -44,6 +51,6 @@ public class SshRemoteService implements SshService {
 
     @Override
     public String getSshHost() {
-        return System.getProperty("ssh.host");
+        return System.getProperty(SshProperties.SSH_HOST);
     }
 }

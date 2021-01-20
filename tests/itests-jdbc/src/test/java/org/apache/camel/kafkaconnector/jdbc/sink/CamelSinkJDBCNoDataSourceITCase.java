@@ -36,18 +36,18 @@ import org.apache.camel.kafkaconnector.jdbc.client.DatabaseClient;
 import org.apache.camel.test.infra.jdbc.services.JDBCService;
 import org.apache.camel.test.infra.jdbc.services.JDBCServiceBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CamelSinkJDBCNoDataSourceITCase extends AbstractKafkaTest {
     @RegisterExtension
     static JDBCService jdbcService;
@@ -60,7 +60,7 @@ public class CamelSinkJDBCNoDataSourceITCase extends AbstractKafkaTest {
     static {
         final String postgresImage = "postgres:9.6.2";
 
-        JdbcDatabaseContainer container = new PostgreSQLContainer(postgresImage)
+        JdbcDatabaseContainer<?> container = new PostgreSQLContainer<>(postgresImage)
                 .withDatabaseName("camel")
                 .withUsername("ckc")
                 .withPassword("ckcDevel123")

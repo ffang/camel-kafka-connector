@@ -42,13 +42,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Testcontainers
 public class CamelSinkSQLITCase extends AbstractKafkaTest {
     private static final Logger LOG = LoggerFactory.getLogger(CamelSinkSQLITCase.class);
 
@@ -59,7 +57,7 @@ public class CamelSinkSQLITCase extends AbstractKafkaTest {
     private int received;
 
     public CamelSinkSQLITCase() {
-        JdbcDatabaseContainer container = new PostgreSQLContainer("postgres:9.6.2")
+        JdbcDatabaseContainer<?> container = new PostgreSQLContainer<>("postgres:9.6.2")
                 .withDatabaseName("camel")
                 .withUsername("ckc")
                 .withPassword("ckcDevel123")

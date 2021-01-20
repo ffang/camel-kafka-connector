@@ -28,17 +28,18 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.models.BlobItem;
 import org.apache.camel.kafkaconnector.CamelSinkTask;
-import org.apache.camel.kafkaconnector.azure.common.AzureCredentialsHolder;
-import org.apache.camel.kafkaconnector.azure.common.services.AzureService;
-import org.apache.camel.kafkaconnector.azure.storage.services.AzureStorageBlobClientUtils;
-import org.apache.camel.kafkaconnector.azure.storage.services.AzureStorageBlobServiceFactory;
 import org.apache.camel.kafkaconnector.common.AbstractKafkaTest;
 import org.apache.camel.kafkaconnector.common.ConnectorPropertyFactory;
 import org.apache.camel.kafkaconnector.common.clients.kafka.KafkaClient;
 import org.apache.camel.kafkaconnector.common.utils.TestUtils;
+import org.apache.camel.test.infra.azure.common.AzureCredentialsHolder;
+import org.apache.camel.test.infra.azure.common.services.AzureService;
+import org.apache.camel.test.infra.azure.storage.blob.clients.AzureStorageBlobClientUtils;
+import org.apache.camel.test.infra.azure.storage.blob.services.AzureStorageBlobServiceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CamelSinkAzureStorageBlobITCase extends AbstractKafkaTest {
     @RegisterExtension
     public static AzureService service = AzureStorageBlobServiceFactory.createAzureService();
@@ -100,7 +102,7 @@ public class CamelSinkAzureStorageBlobITCase extends AbstractKafkaTest {
                 blobClient.download(outputStream);
                 String contentFile = outputStream.toString();
 
-                LOG.info("Received: \'{}\' with content: \'{}\'", receivedFile, contentFile);
+                LOG.info("Received: '{}' with content: '{}'", receivedFile, contentFile);
                 assertEquals(sentData.get(receivedFile), contentFile, "Did not receive the same message that was sent");
 
                 received++;
@@ -132,7 +134,7 @@ public class CamelSinkAzureStorageBlobITCase extends AbstractKafkaTest {
         }
     }
 
-    public void runTest(ConnectorPropertyFactory connectorPropertyFactory) throws ExecutionException, InterruptedException, IOException {
+    public void runTest(ConnectorPropertyFactory connectorPropertyFactory) throws ExecutionException, InterruptedException {
         connectorPropertyFactory.log();
         getKafkaConnectService().initializeConnectorBlocking(connectorPropertyFactory, 1);
 

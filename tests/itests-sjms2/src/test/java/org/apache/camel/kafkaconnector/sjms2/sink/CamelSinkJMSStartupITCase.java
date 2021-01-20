@@ -17,6 +17,7 @@
 
 package org.apache.camel.kafkaconnector.sjms2.sink;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -25,35 +26,33 @@ import org.apache.camel.kafkaconnector.common.ConnectorPropertyFactory;
 import org.apache.camel.kafkaconnector.common.clients.kafka.KafkaClient;
 import org.apache.camel.kafkaconnector.common.utils.TestUtils;
 import org.apache.camel.kafkaconnector.sjms2.common.SJMS2Common;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.junit.jupiter.api.BeforeEach;
+import org.apache.kafka.connect.runtime.rest.entities.ConnectorStateInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Integration tests for the JMS sink with a DLQ configuration. This test forces a failure in the sink connector to
- * ensure that the failed records are added to the DLQ configured in Kafka.
+ * A simple test to make sure we are not losing or hiding exception data on errors
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class CamelSinkWithDLQJMSITCase extends AbstractKafkaTest {
-    private static final Logger LOG = LoggerFactory.getLogger(CamelSinkWithDLQJMSITCase.class);
+public class CamelSinkJMSStartupITCase extends AbstractKafkaTest {
+    private static final Logger LOG = LoggerFactory.getLogger(CamelSinkJMSStartupITCase.class);
 
-    private int received;
-    private final int expect = 10;
-    private int errors;
-    private final int expectedErrors = 1;
+    private boolean running;
+    private String trace;
+
 
     private Properties connectionProperties() {
         Properties properties = new Properties();
 
         properties.put("camel.component.sjms2.connection-factory", "#class:org.apache.qpid.jms.JmsConnectionFactory");
-        properties.put("camel.component.sjms2.connection-factory.remoteURI", "invalid");
+        properties.put("camel.component.sjms2.connection-factory.remoteURI", "tcp://invalid");
 
         return properties;
     }
@@ -63,47 +62,54 @@ public class CamelSinkWithDLQJMSITCase extends AbstractKafkaTest {
         return new String[] {"camel-sjms2-kafka-connector"};
     }
 
-    @BeforeEach
-    public void setUp() {
-        received = 0;
-        errors = 0;
+    private void connectorStateCheck(ConnectorStateInfo connectorStateInfo) {
+        LOG.debug("Checking state for {}", connectorStateInfo.name());
+        running = connectorStateInfo.tasks().stream().allMatch(t -> isRunning(t));
+
     }
 
-    private <T> boolean checkDqlRecord(ConsumerRecord<String, T> record) {
-        LOG.debug("Received: {}", record.value());
-        errors++;
-
-        if (errors >= expectedErrors) {
-            return false;
+    private boolean isRunning(ConnectorStateInfo.TaskState t) {
+        boolean isRunningState =  t.state().equals("RUNNING");
+        if (!isRunningState) {
+            trace = t.trace();
         }
 
-        return true;
+        return isRunningState;
     }
 
     private void runTest(ConnectorPropertyFactory connectorPropertyFactory) throws ExecutionException, InterruptedException {
         connectorPropertyFactory.log();
         getKafkaConnectService().initializeConnector(connectorPropertyFactory);
 
-        LOG.debug("Creating the consumer ...");
-
-
         KafkaClient<String, String> kafkaClient = new KafkaClient<>(getKafkaService().getBootstrapServers());
 
-        for (int i = 0; i < expect; i++) {
-            kafkaClient.produce(TestUtils.getDefaultTestTopic(this.getClass()), "Sink test message " + i);
-        }
+        kafkaClient.produce(TestUtils.getDefaultTestTopic(this.getClass()), "Sink test message ");
+    }
 
-        LOG.debug("Created the consumer ... About to receive messages");
+    private void checkThatFailed() throws InterruptedException {
+        int i = 25;
+        do {
+            kafkaConnectService.connectorStateCheck(this::connectorStateCheck);
+            i--;
+
+            if (i > 0 && running) {
+                Thread.sleep(Duration.ofSeconds(1).toMillis());
+            }
+        } while (i > 0 && running);
+
+        assertFalse(running, "The connector should be in a failed state");
+
+        LOG.trace(trace);
+        assertTrue(trace.contains("Failed to resolve endpoint"),
+                "Trace should contain a Camel error message");
     }
 
 
     @Test
-    @Timeout(10)
-    public void testSendReceiveWithError() {
+    @Timeout(30)
+    public void testStartup() {
         try {
             Properties brokenProp = connectionProperties();
-
-            brokenProp.put("camel.component.sjms2.connection-factory.remoteURI", "invalid");
 
             ConnectorPropertyFactory connectorPropertyFactory = CamelJMSPropertyFactory
                     .basic()
@@ -112,13 +118,10 @@ public class CamelSinkWithDLQJMSITCase extends AbstractKafkaTest {
                     .withDestinationName(SJMS2Common.DEFAULT_JMS_QUEUE)
                     .withDeadLetterQueueTopicName("dlq-sink-topic");
 
+            // Inject an invalid configuration and check that fails
             runTest(connectorPropertyFactory);
 
-            KafkaClient<String, Integer> kafkaClient = new KafkaClient<>(getKafkaService().getBootstrapServers());
-            kafkaClient.consume("dlq-sink-topic", this::checkDqlRecord);
-
-            assertEquals(expectedErrors, errors, "Didn't process the expected amount of messages");
-
+            checkThatFailed();
         } catch (Exception e) {
             LOG.error("JMS test failed: {}", e.getMessage(), e);
             fail(e.getMessage());

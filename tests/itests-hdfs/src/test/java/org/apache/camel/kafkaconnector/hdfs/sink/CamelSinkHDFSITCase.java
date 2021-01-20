@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CamelSinkHDFSITCase extends AbstractKafkaTest {
     @RegisterExtension
     public static HDFSService hdfsService = HDFSServiceFactory.createService();
@@ -68,14 +70,14 @@ public class CamelSinkHDFSITCase extends AbstractKafkaTest {
 
         if (!hdfsEasy.delete(currentBasePath)) {
             // This is OK: directory may not exist on the path
-            LOG.debug("The directory at {} was not removed {}", currentBasePath.getName());
+            LOG.debug("The directory at {} was not removed", currentBasePath.getName());
         }
     }
 
     @AfterEach
     public void tearDown() {
         if (!hdfsEasy.delete(currentBasePath)) {
-            LOG.warn("The directory at {} was not removed {}", currentBasePath.getName());
+            LOG.warn("The directory at {} was not removed", currentBasePath.getName());
         }
     }
 

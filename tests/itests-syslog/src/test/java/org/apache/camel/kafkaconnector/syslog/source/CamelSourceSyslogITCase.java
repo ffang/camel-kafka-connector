@@ -30,10 +30,10 @@ import org.apache.camel.kafkaconnector.common.utils.TestUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * A simple test case that checks whether the timer produces the expected number of
  * messages
  */
-@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class CamelSourceSyslogITCase extends AbstractKafkaTest {
     private static final int FREE_PORT = NetworkUtils.getFreePort("localhost", NetworkUtils.Protocol.UDP);
 
@@ -62,14 +62,14 @@ public class CamelSourceSyslogITCase extends AbstractKafkaTest {
         received = 0;
     }
 
-    private void produceLogMessages(String protocol, String host, String port, String message) throws Exception {
+    private void produceLogMessages(String protocol, String host, String port, String message) {
         CamelContext camelContext = new DefaultCamelContext();
 
         try {
             camelContext.getRegistry().bind("encoder", new Rfc5425Encoder());
             camelContext.addRoutes(new RouteBuilder() {
                 @Override
-                public void configure() throws Exception {
+                public void configure() {
                     from("direct:test").marshal(new SyslogDataFormat()).to("netty:" + protocol + ":" + host + ":" + port + "?sync=false&encoders=#encoder&useByteBuf=true");
                 }
             });
