@@ -59,7 +59,7 @@ public class CamelSinkCXFITCase extends AbstractKafkaTest {
     protected static final String GREET_ME_OPERATION = "greetMe";
     protected static final String TEST_MESSAGE = "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
         + "<soap:Body><ns1:echo xmlns:ns1=\"http://source.cxf.kafkaconnector.camel.apache.org/\">"
-        + "<arg0 xmlns=\"http://cxf.component.camel.apache.org/\">hello world</arg0>"
+        + "<arg0 xmlns=\"http://source.cxf.kafkaconnector.camel.apache.org/\">hello world</arg0>"
         + "</ns1:echo></soap:Body></soap:Envelope>";
 
     protected Server server;
