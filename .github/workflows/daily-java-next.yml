@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-name: Daily JDK 14 Build
+name: Daily Build with Newer Java Versions
 
 env:
   MAVEN_ARGS: -V -ntp
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '14' ]
+        java: [ '15' ]
     steps:
       - uses: actions/checkout@v1
       - name: Set up JDK ${{ matrix.java }}
@@ -81,5 +81,5 @@ jobs:
         uses: actions/upload-artifact@v2
         if: always()
         with:
-          name: test-logs
+          name: test-logs-java-${{ matrix.java }}
           path: tests/**/target/tests.log

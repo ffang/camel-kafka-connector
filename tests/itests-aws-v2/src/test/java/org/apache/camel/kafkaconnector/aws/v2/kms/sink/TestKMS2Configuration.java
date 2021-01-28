@@ -15,21 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.camel.kafkaconnector.aws.v2.kinesis.source;
+package org.apache.camel.kafkaconnector.aws.v2.kms.sink;
 
-import org.apache.camel.component.aws2.kinesis.Kinesis2Configuration;
+import org.apache.camel.component.aws2.kms.KMS2Configuration;
 import org.apache.camel.test.infra.aws2.clients.AWSSDKClientUtils;
-import software.amazon.awssdk.services.kinesis.KinesisClient;
+import software.amazon.awssdk.services.kms.KmsClient;
 
-public class TestKinesisConfiguration extends Kinesis2Configuration {
-    private KinesisClient kinesisClient;
+public class TestKMS2Configuration extends KMS2Configuration {
+    private KmsClient client;
 
     @Override
-    public KinesisClient getAmazonKinesisClient() {
-        if (kinesisClient == null) {
-            kinesisClient = AWSSDKClientUtils.newKinesisClient();
+    public KmsClient getKmsClient() {
+        if (client == null) {
+            client = AWSSDKClientUtils.newKMSClient();
         }
 
-        return kinesisClient;
+        return client;
     }
 }

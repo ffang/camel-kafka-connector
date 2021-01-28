@@ -15,25 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.camel.kafkaconnector.aws.v2.s3.source;
+package org.apache.camel.kafkaconnector.aws.v2.iam.sink;
 
-import org.apache.camel.component.aws2.s3.AWS2S3Configuration;
+import org.apache.camel.component.aws2.iam.IAM2Configuration;
 import org.apache.camel.test.infra.aws2.clients.AWSSDKClientUtils;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.iam.IamClient;
 
-public class TestS3Configuration extends AWS2S3Configuration {
-    private S3Client s3Client;
-
-    private S3Client buildClient() {
-        return AWSSDKClientUtils.newS3Client();
-    }
+public class TestIAMConfiguration extends IAM2Configuration {
+    private IamClient client;
 
     @Override
-    public S3Client getAmazonS3Client() {
-        if (s3Client == null) {
-            s3Client = buildClient();
+    public IamClient getIamClient() {
+        if (client == null) {
+            client = AWSSDKClientUtils.newIAMClient();
         }
 
-        return s3Client;
+        return client;
     }
 }

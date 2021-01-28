@@ -15,9 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.camel.kafkaconnector.aws.v2.cw.sink;
+package org.apache.camel.kafkaconnector.aws.v2.iam.sink;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -25,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.camel.kafkaconnector.CamelSinkTask;
 import org.apache.camel.kafkaconnector.aws.v2.common.CamelSinkAWSTestSupport;
+import org.apache.camel.kafkaconnector.aws.v2.cw.sink.TestCloudWatchConfiguration;
 import org.apache.camel.kafkaconnector.common.ConnectorPropertyFactory;
 import org.apache.camel.kafkaconnector.common.utils.TestUtils;
 import org.apache.camel.test.infra.aws.common.services.AWSService;
@@ -32,58 +34,34 @@ import org.apache.camel.test.infra.aws2.clients.AWSSDKClientUtils;
 import org.apache.camel.test.infra.aws2.services.AWSServiceFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
-import software.amazon.awssdk.services.cloudwatch.model.Dimension;
-import software.amazon.awssdk.services.cloudwatch.model.ListMetricsRequest;
-import software.amazon.awssdk.services.cloudwatch.model.ListMetricsResponse;
-import software.amazon.awssdk.services.cloudwatch.model.Metric;
+import software.amazon.awssdk.services.iam.IamClient;
+import software.amazon.awssdk.services.iam.model.ListUsersResponse;
+import software.amazon.awssdk.services.iam.model.User;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@EnabledIfSystemProperty(named = "enable.slow.tests", matches = "true")
-public class CamelSinkAWSCWITCase extends CamelSinkAWSTestSupport {
-
+public class CamelSinkAWSIAMITCase extends CamelSinkAWSTestSupport {
     @RegisterExtension
-    public static AWSService awsService = AWSServiceFactory.createCloudWatchService();
-    private static final Logger LOG = LoggerFactory.getLogger(CamelSinkAWSCWITCase.class);
+    public static AWSService awsService = AWSServiceFactory.createIAMService();
+    private static final Logger LOG = LoggerFactory.getLogger(CamelSinkAWSIAMITCase.class);
 
-    private CloudWatchClient client;
-    private String namespace;
-    private String metricName = "test-metric";
+    private IamClient client;
+    private String logicalName;
 
     private volatile int received;
     private final int expect = 10;
 
     @Override
-    protected String[] getConnectorsInTest() {
-        return new String[] {"camel-aws2-cw-kafka-connector"};
-    }
-
-    @BeforeEach
-    public void setUp() {
-        client = AWSSDKClientUtils.newCloudWatchClient();
-
-        namespace = "cw-" + TestUtils.randomWithRange(0, 1000);
-        LOG.debug("Using namespace {} for the test", namespace);
-
-        received = 0;
-    }
-
-    @Override
     protected Map<String, String> messageHeaders(String text, int current) {
         Map<String, String> headers = new HashMap<>();
 
-        headers.put(CamelSinkTask.HEADER_CAMEL_PREFIX + "CamelAwsCwMetricDimensionName",
-                "test-dimension-" + current);
-        headers.put(CamelSinkTask.HEADER_CAMEL_PREFIX + "CamelAwsCwMetricDimensionValue", String.valueOf(current));
+        headers.put(CamelSinkTask.HEADER_CAMEL_PREFIX + "CamelAwsIAMUsername",
+                "username-" + current);
 
         return headers;
     }
@@ -91,29 +69,22 @@ public class CamelSinkAWSCWITCase extends CamelSinkAWSTestSupport {
     @Override
     protected void consumeMessages(CountDownLatch latch) {
         try {
-            ListMetricsRequest request = ListMetricsRequest.builder()
-                    .namespace(namespace)
-                    .metricName(metricName)
-                    .build();
-
             while (true) {
-                ListMetricsResponse response = client.listMetrics(request);
+                ListUsersResponse response = client.listUsers();
 
-                for (Metric metric : response.metrics()) {
-                    LOG.info("Retrieved metric {}", metric.metricName());
+                List<User> users = response.users();
 
-                    for (Dimension dimension : metric.dimensions()) {
-                        LOG.info("Dimension {} value: {}", dimension.name(), dimension.value());
-                        received++;
+                received = users.size();
+                for (User user : users) {
+                    LOG.info("Received user: {}", user.userName());
 
-                        if (received == expect) {
-                            return;
-                        }
+                    if (received >= expect) {
+                        return;
                     }
                 }
 
                 if (!waitForData()) {
-                    break;
+                    return;
                 }
             }
         } finally {
@@ -131,25 +102,38 @@ public class CamelSinkAWSCWITCase extends CamelSinkAWSTestSupport {
         }
     }
 
+    @Override
+    protected String[] getConnectorsInTest() {
+        return new String[] {"camel-aws2-iam-kafka-connector"};
+    }
+
+    @BeforeEach
+    public void setUp() {
+        client = AWSSDKClientUtils.newIAMClient();
+        logicalName = "iam-" + TestUtils.randomWithRange(1, 100);
+
+        received = 0;
+    }
 
     @Test
-    @Timeout(value = 120)
+    @Timeout(90)
     public void testBasicSendReceive() {
         try {
             Properties amazonProperties = awsService.getConnectionProperties();
             String topicName = TestUtils.getDefaultTestTopic(this.getClass());
 
-            ConnectorPropertyFactory testProperties = CamelAWSCWPropertyFactory
+            ConnectorPropertyFactory testProperties = CamelAWSIAMPropertyFactory
                     .basic()
                     .withTopics(topicName)
                     .withConfiguration(TestCloudWatchConfiguration.class.getName())
                     .withAmazonConfig(amazonProperties)
-                    .withName(metricName)
-                    .withSinkPathNamespace(namespace);
+                    .withSinkPathLabel(logicalName)
+                    .withConfiguration(TestIAMConfiguration.class.getName())
+                    .withSinkEndpointOperation("createUser");
 
             runTest(testProperties, topicName, expect);
         } catch (Exception e) {
-            LOG.error("Amazon CloudWatch test failed: {}", e.getMessage(), e);
+            LOG.error("Amazon IAM test failed: {}", e.getMessage(), e);
             fail(e.getMessage());
         }
     }
