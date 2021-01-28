@@ -17,9 +17,14 @@
 
 package org.apache.camel.kafkaconnector.cxf.sink;
 
-public class GreeterImpl {
+import java.util.logging.Logger;
 
+
+public class GreeterImpl extends org.apache.hello_world_soap_http.GreeterImpl {
+    
+    private static final Logger LOG = Logger.getLogger(GreeterImpl.class.getName());
     public String greetMe(String hi) {
+        LOG.info("jaxws greetMe " + hi);
         return "Greet " + hi;
     }
 }
